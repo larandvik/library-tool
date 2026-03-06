@@ -11,11 +11,9 @@ import com.lav.libtool.repository.ReaderRepository;
 import com.lav.libtool.util.NormalizerEmail;
 import com.lav.libtool.util.NormalizerPhone;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReaderServiceImpl implements ReaderService {

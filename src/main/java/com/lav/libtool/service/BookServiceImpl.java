@@ -12,13 +12,11 @@ import com.lav.libtool.repository.BookRepository;
 import com.lav.libtool.spec.BookSpecifications;
 import com.lav.libtool.util.NormalizerIsbn;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BookServiceImpl implements BookService {
@@ -27,7 +25,6 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public BookResponseDTO create(BookCreateRequestDTO newBook) {
-        log.info("Creating book isbn={}, title={}", newBook.isbn(), newBook.title());
         var normalizeIsbn = NormalizerIsbn.normalize(newBook.isbn());
 
         if(repository.existsByIsbn(normalizeIsbn)){
@@ -46,7 +43,6 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public BookResponseDTO findById(long id) {
-        log.info("Finding book id={}", id);
         return repository.findById(id)
                 .map(BookMapper::toResponseDTO)
                 .orElseThrow(() -> new BookNotFoundException(id));
@@ -54,7 +50,6 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public List<BookResponseDTO> findAll() {
-        log.info("Finding all books");
         return repository.findAll().stream()
                 .map(BookMapper::toResponseDTO)
                 .toList();
@@ -62,7 +57,6 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public BookResponseDTO update(long id, BookUpdateRequestDTO updateBook) {
-        log.info("Updating book id={}", id);
         var book = repository.findById(id).orElseThrow(() -> new BookNotFoundException(id));
 
         book.updateDetails(updateBook.title(), updateBook.author(), updateBook.publicationYear(), updateBook.totalCopies());
@@ -72,7 +66,6 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public void delete(long id) {
-        log.info("Deleting book id={}", id);
         if(!repository.existsById(id)){
             throw new BookNotFoundException(id);
         }
