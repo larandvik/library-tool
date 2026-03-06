@@ -5,6 +5,7 @@ import com.lav.libtool.dto.bookloan.BookLoanResponseDTO;
 import com.lav.libtool.entity.BookLoan;
 import com.lav.libtool.entity.Status;
 import com.lav.libtool.exceptions.LoanNotFoundException;
+import com.lav.libtool.exceptions.RemoteServiceNotAvailableException;
 import com.lav.libtool.mappers.BookLoanMapper;
 import com.lav.libtool.repository.BookLoanRepository;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +61,16 @@ public class BookLoanServiceImpl implements BookLoanService {
         return repository.findAll().stream()
                 .map(BookLoanMapper::toResponseDTO)
                 .toList();
+    }
+
+    @Override
+    public BookLoanResponseDTO getResponseFallbackIssueBook(RemoteServiceNotAvailableException e, BookLoanCreateRequestDTO request) {
+        throw new RemoteServiceNotAvailableException();
+    }
+
+    @Override
+    public BookLoanResponseDTO getResponseFallbackReturnBook(RemoteServiceNotAvailableException e, Long loanId) {
+        throw new RemoteServiceNotAvailableException();
     }
 
 }

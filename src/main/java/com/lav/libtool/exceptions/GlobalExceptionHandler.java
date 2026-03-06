@@ -43,4 +43,9 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(exception.getMessage(), HttpStatus.CONFLICT);
     }
 
+    @ExceptionHandler(RemoteServiceNotAvailableException.class)
+    public ResponseEntity<String> handleRemoteServiceNotAvailableException(RemoteServiceNotAvailableException exception) {
+        return new ResponseEntity<>(exception.getMessage(), HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
 }
