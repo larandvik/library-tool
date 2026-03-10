@@ -12,12 +12,15 @@ import com.lav.libtool.repository.BookRepository;
 import com.lav.libtool.spec.BookSpecifications;
 import com.lav.libtool.util.NormalizerIsbn;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-
+@Slf4j
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class BookServiceImpl implements BookService {
 
@@ -25,6 +28,8 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public BookResponseDTO create(BookCreateRequestDTO newBook) {
+        log.info("Creating new book: {}", newBook.title());
+
         var normalizeIsbn = NormalizerIsbn.normalize(newBook.isbn());
 
         if(repository.existsByIsbn(normalizeIsbn)){
@@ -38,18 +43,25 @@ public class BookServiceImpl implements BookService {
                 newBook.totalCopies());
         var savedBook = repository.save(book);
 
+        log.info("Book created successfully with ID: {}", savedBook.getId());
         return BookMapper.toResponseDTO(savedBook);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public BookResponseDTO findById(long id) {
+        log.debug("Fetching book with ID: {}", id);
+
         return repository.findById(id)
                 .map(BookMapper::toResponseDTO)
                 .orElseThrow(() -> new BookNotFoundException(id));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<BookResponseDTO> findAll() {
+        log.debug("Fetching all books");
+
         return repository.findAll().stream()
                 .map(BookMapper::toResponseDTO)
                 .toList();
@@ -57,22 +69,30 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public BookResponseDTO update(long id, BookUpdateRequestDTO updateBook) {
+        log.info("Updating book with ID: {}", id);
+
         var book = repository.findById(id).orElseThrow(() -> new BookNotFoundException(id));
 
         book.updateDetails(updateBook.title(), updateBook.author(), updateBook.publicationYear(), updateBook.totalCopies());
         var savedBook = repository.save(book);
+
+        log.info("Book updated successfully with ID: {}", id);
         return BookMapper.toResponseDTO(savedBook);
     }
 
     @Override
     public void delete(long id) {
+        log.info("Deleting book with ID: {}", id);
+
         if(!repository.existsById(id)){
             throw new BookNotFoundException(id);
         }
         repository.deleteById(id);
+        log.info("Book deleted successfully with ID: {}", id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<BookResponseDTO> search(String title,
                                         String author,
                                         String isbn,
@@ -107,6 +127,8 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public void decreaseAvailableCopies(long bookId) {
+        log.debug("Decreasing available copies for book ID: {}", bookId);
+
         Book book = repository.findById(bookId)
                 .orElseThrow(() -> new BookNotFoundException(bookId));
 
@@ -118,6 +140,8 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public void increaseAvailableCopies(long bookId) {
+        log.debug("Increasing available copies for book ID: {}", bookId);
+
         Book book = repository.findById(bookId)
                 .orElseThrow(() -> new BookNotFoundException(bookId));
 
