@@ -1,13 +1,21 @@
 package com.lav.libtool.dto.reader;
 
-import jakarta.annotation.Nullable;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 
 public record ReaderUpdateRequestDTO(
+
+        @NotBlank
         String firstName,
+
+        @NotBlank
         String lastName,
+
+        @NotBlank
         @Email
-        @Nullable
         String email,
+
+        @NotBlank
         String phone
+
 ) {}

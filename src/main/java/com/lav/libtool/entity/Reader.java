@@ -3,11 +3,13 @@ package com.lav.libtool.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor
 public class Reader {
 
@@ -41,25 +43,6 @@ public class Reader {
         this.lastName = lastName;
         this.email = email;
         this.phone = phone;
-    }
-
-    public void updateDetails(String firstName, String lastName, String email, String phone) {
-
-        if (!firstName.isEmpty()) {
-            this.firstName = firstName;
-        }
-
-        if (!lastName.isEmpty()) {
-            this.lastName = lastName;
-        }
-
-        if (!email.isEmpty()) {
-            this.email = email;
-        }
-
-        if (!phone.isEmpty()) {
-            this.phone = phone;
-        }
     }
 
 }
