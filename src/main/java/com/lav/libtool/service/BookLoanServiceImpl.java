@@ -31,16 +31,31 @@ public class BookLoanServiceImpl implements BookLoanService {
         log.info("Issuing book ID: {} to reader ID: {} with due date: {}",
                 request.bookId(), request.readerId(), request.dueDate());
 
-        var book = bookService.findById(request.bookId());
-        var reader = readerService.findById(request.readerId());
-        bookService.decreaseAvailableCopies(book.id());
+        var book = bookService.findEntityById(request.bookId());
+        var reader = readerService.findEntityById(request.readerId());
+        bookService.decreaseAvailableCopies(book.getId());
 
-        var savedLoan = repository.save(new BookLoan(book.id(), reader.id(), request.dueDate()));
+        var savedLoan = repository.save(new BookLoan(book, reader, request.dueDate()));
         log.info("Loan created successfully with ID: {}", savedLoan.getId());
         return BookLoanMapper.toResponseDTO(savedLoan);
     }
 
     @Override
+    // TODO: Самая крупная проблема тут
+    //  1) Я бы не делал readOnly для метода возврата книги,
+    //  так как там есть изменения в сущности и вызов другого сервиса, который тоже изменяет данные.
+    //  Spring Boot по умолчанию использует класс‑based proxy (CGLIB),
+    //  поэтому аннотации на интерфейсе в большинстве конфигураций игнорируются,
+    //  а фактическая транзакция берётся из BookLoanServiceImpl.
+    //  Получается, что returnBook() → открывает read‑only транзакцию.
+    //  Внутри неё вызывается bookService.increaseAvailableCopies(...) → она участвует в той же read‑only транзакции
+    //  Потому что у тебя по умолч propagation = REQUIRED.
+    //  Провайдер JPA может:
+    //      вообще не делать flush изменений,
+    //      или даже бросать исключение при попытке записи (зависит от реализации).
+    //  Поэтому: читать в readOnly=true можно, писать — нельзя/небезопасно.
+    //  Здесь лучше просто оставить класс @Transactional
+    //  2) можно специфицировать rollBackFor, если нужно откатывать транзакцию при определенных исключениях
     @Transactional(readOnly = true)
     public BookLoanResponseDTO returnBook(Long loanId) {
         log.info("Processing book return for loan ID: {}", loanId);
@@ -49,7 +64,7 @@ public class BookLoanServiceImpl implements BookLoanService {
                 .orElseThrow(() -> new LoanNotFoundException(loanId));
 
         loan.markReturned();
-        bookService.increaseAvailableCopies(loan.getBookId());
+        bookService.increaseAvailableCopies(loan.getBook().getId());
 
         log.info("Book returned successfully for loan ID: {}", loanId);
         return BookLoanMapper.toResponseDTO(loan);

@@ -15,12 +15,13 @@ public class BookLoan {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // TODO: BookLoan хранит bookId/readerId как простые поля вместо связей JPA 
-    @Column(nullable = false)
-    private Long bookId;
+    @ManyToOne
+    @JoinColumn(name = "book_id", nullable = false)
+    private Book book;
 
-    @Column(nullable = false)
-    private Long readerId;
+    @ManyToOne
+    @JoinColumn(name = "reader_id", nullable = false)
+    private Reader reader;
 
     @Column(nullable = false)
     private LocalDate loanDate;
@@ -40,9 +41,9 @@ public class BookLoan {
         }
     }
 
-    public BookLoan(Long bookId, Long readerId, LocalDate dueDate) {
-        this.bookId = bookId;
-        this.readerId = readerId;
+    public BookLoan(Book book, Reader reader, LocalDate dueDate) {
+        this.book = book;
+        this.reader = reader;
         this.dueDate = dueDate;
     }
 

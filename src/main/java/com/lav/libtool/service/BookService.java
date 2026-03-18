@@ -3,7 +3,7 @@ package com.lav.libtool.service;
 import com.lav.libtool.dto.book.BookCreateRequestDTO;
 import com.lav.libtool.dto.book.BookResponseDTO;
 import com.lav.libtool.dto.book.BookUpdateRequestDTO;
-import jakarta.transaction.Transactional;
+import com.lav.libtool.entity.Book;
 
 import java.util.List;
 
@@ -12,6 +12,8 @@ public interface BookService {
     BookResponseDTO create(BookCreateRequestDTO newBook);
 
     BookResponseDTO findById(long id);
+
+    Book findEntityById(Long id);
 
     List<BookResponseDTO> findAll();
 
@@ -27,10 +29,8 @@ public interface BookService {
             Boolean available
     );
 
-    @Transactional
     void decreaseAvailableCopies(long bookId);
 
-    @Transactional
     void increaseAvailableCopies(long bookId);
 
 }

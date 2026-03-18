@@ -7,10 +7,12 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 
 @Configuration
 @Slf4j
 @Profile("dev")
+@Order(10)
 public class LoadBookDatabase {
 
     @Bean

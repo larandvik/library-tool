@@ -71,6 +71,15 @@ public class ReaderServiceImpl implements ReaderService {
 
     @Override
     @Transactional(readOnly = true)
+    public Reader findEntityById(long id) {
+        log.debug("Fetching reader with ID: {}", id);
+
+        return repository.findById(id)
+                .orElseThrow(() -> new ReaderNotFoundException(id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<ReaderResponseDTO> findAll() {
         log.debug("Fetching all readers");
 

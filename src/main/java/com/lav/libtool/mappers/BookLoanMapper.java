@@ -11,8 +11,8 @@ public final class BookLoanMapper {
     public static BookLoanResponseDTO toResponseDTO(BookLoan bookLoan) {
         return new BookLoanResponseDTO(
                 bookLoan.getId(),
-                bookLoan.getBookId(),
-                bookLoan.getReaderId(),
+                bookLoan.getBook().getId(),
+                bookLoan.getReader().getId(),
                 bookLoan.getLoanDate(),
                 bookLoan.getDueDate(),
                 bookLoan.getStatus(),

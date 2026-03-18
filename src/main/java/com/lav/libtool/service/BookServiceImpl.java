@@ -59,6 +59,15 @@ public class BookServiceImpl implements BookService {
 
     @Override
     @Transactional(readOnly = true)
+    public Book findEntityById(Long id) {
+        log.debug("Fetching book with ID: {}", id);
+
+        return repository.findById(id)
+                .orElseThrow(() -> new BookNotFoundException(id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<BookResponseDTO> findAll() {
         log.debug("Fetching all books");
 
@@ -127,10 +136,9 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public void decreaseAvailableCopies(long bookId) {
-        log.debug("Decreasing available copies for book ID: {}", bookId);
+        Book book = findEntityById(bookId);
 
-        Book book = repository.findById(bookId)
-                .orElseThrow(() -> new BookNotFoundException(bookId));
+        log.debug("Decreasing available copies for book ID: {}", bookId);
 
         if (book.getAvailableCopies() == 0) {
             throw new BookNotAvailableException(BookMapper.toResponseDTO(book));
@@ -140,10 +148,9 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public void increaseAvailableCopies(long bookId) {
-        log.debug("Increasing available copies for book ID: {}", bookId);
+        Book book = findEntityById(bookId);
 
-        Book book = repository.findById(bookId)
-                .orElseThrow(() -> new BookNotFoundException(bookId));
+        log.debug("Increasing available copies for book ID: {}", bookId);
 
         book.returnCopy();
     }
