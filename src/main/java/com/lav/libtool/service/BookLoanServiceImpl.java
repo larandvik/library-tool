@@ -11,6 +11,9 @@ import com.lav.libtool.mappers.BookLoanMapper;
 import com.lav.libtool.repository.BookLoanRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +31,9 @@ public class BookLoanServiceImpl implements BookLoanService {
     private final ReaderService readerService;
 
     @Override
+    @Retryable(retryFor = {RemoteServiceNotAvailableException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 1000))
     public BookLoanResponseDTO issueBook(BookLoanCreateRequestDTO request) {
         log.info("Issuing book ID: {} to reader ID: {} with due date: {}",
                 request.bookId(), request.readerId(), request.dueDate());
@@ -42,28 +48,15 @@ public class BookLoanServiceImpl implements BookLoanService {
     }
 
     @Override
-    // TODO: Самая крупная проблема тут
-    //  1) Я бы не делал readOnly для метода возврата книги,
-    //  так как там есть изменения в сущности и вызов другого сервиса, который тоже изменяет данные.
-    //  Spring Boot по умолчанию использует класс‑based proxy (CGLIB),
-    //  поэтому аннотации на интерфейсе в большинстве конфигураций игнорируются,
-    //  а фактическая транзакция берётся из BookLoanServiceImpl.
-    //  Получается, что returnBook() → открывает read‑only транзакцию.
-    //  Внутри неё вызывается bookService.increaseAvailableCopies(...) → она участвует в той же read‑only транзакции
-    //  Потому что у тебя по умолч propagation = REQUIRED.
-    //  Провайдер JPA может:
-    //      вообще не делать flush изменений,
-    //      или даже бросать исключение при попытке записи (зависит от реализации).
-    //  Поэтому: читать в readOnly=true можно, писать — нельзя/небезопасно.
-    //  Здесь лучше просто оставить класс @Transactional
-    //  2) можно специфицировать rollBackFor, если нужно откатывать транзакцию при определенных исключениях
-    @Transactional(readOnly = true)
+    @Retryable(retryFor = {RemoteServiceNotAvailableException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 1000))
     public BookLoanResponseDTO returnBook(Long loanId) {
         log.info("Processing book return for loan ID: {}", loanId);
 
         var loan = repository.findById(loanId)
                 .orElseThrow(() -> new BookException(BookErrorType.LOAN_NOT_FOUND));
-        if(loan.getStatus() == Status.RETURNED) throw new BookException(BookErrorType.BOOK_ALREADY_RETURNED);
+        if (loan.getStatus() == Status.RETURNED) throw new BookException(BookErrorType.BOOK_ALREADY_RETURNED);
 
         loan.markReturned();
         bookService.increaseAvailableCopies(loan.getBook().getId());
@@ -103,11 +96,13 @@ public class BookLoanServiceImpl implements BookLoanService {
     }
 
     @Override
+    @Recover
     public BookLoanResponseDTO getResponseFallbackIssueBook(RemoteServiceNotAvailableException e, BookLoanCreateRequestDTO request) {
         throw new RemoteServiceNotAvailableException();
     }
 
     @Override
+    @Recover
     public BookLoanResponseDTO getResponseFallbackReturnBook(RemoteServiceNotAvailableException e, Long loanId) {
         throw new RemoteServiceNotAvailableException();
     }
