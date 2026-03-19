@@ -63,6 +63,7 @@ public class BookLoanServiceImpl implements BookLoanService {
 
         var loan = repository.findById(loanId)
                 .orElseThrow(() -> new BookException(BookErrorType.LOAN_NOT_FOUND));
+        if(loan.getStatus() == Status.RETURNED) throw new BookException(BookErrorType.BOOK_ALREADY_RETURNED);
 
         loan.markReturned();
         bookService.increaseAvailableCopies(loan.getBook().getId());
