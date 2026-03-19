@@ -4,7 +4,8 @@ import com.lav.libtool.dto.bookloan.BookLoanCreateRequestDTO;
 import com.lav.libtool.dto.bookloan.BookLoanResponseDTO;
 import com.lav.libtool.entity.BookLoan;
 import com.lav.libtool.entity.Status;
-import com.lav.libtool.exceptions.LoanNotFoundException;
+import com.lav.libtool.exceptions.BookErrorType;
+import com.lav.libtool.exceptions.BookException;
 import com.lav.libtool.exceptions.RemoteServiceNotAvailableException;
 import com.lav.libtool.mappers.BookLoanMapper;
 import com.lav.libtool.repository.BookLoanRepository;
@@ -61,7 +62,7 @@ public class BookLoanServiceImpl implements BookLoanService {
         log.info("Processing book return for loan ID: {}", loanId);
 
         var loan = repository.findById(loanId)
-                .orElseThrow(() -> new LoanNotFoundException(loanId));
+                .orElseThrow(() -> new BookException(BookErrorType.LOAN_NOT_FOUND));
 
         loan.markReturned();
         bookService.increaseAvailableCopies(loan.getBook().getId());

@@ -4,9 +4,8 @@ import com.lav.libtool.dto.book.BookCreateRequestDTO;
 import com.lav.libtool.dto.book.BookResponseDTO;
 import com.lav.libtool.dto.book.BookUpdateRequestDTO;
 import com.lav.libtool.entity.Book;
-import com.lav.libtool.exceptions.BookAlreadyExistsException;
-import com.lav.libtool.exceptions.BookNotAvailableException;
-import com.lav.libtool.exceptions.BookNotFoundException;
+import com.lav.libtool.exceptions.BookErrorType;
+import com.lav.libtool.exceptions.BookException;
 import com.lav.libtool.mappers.BookMapper;
 import com.lav.libtool.repository.BookRepository;
 import com.lav.libtool.spec.BookSpecifications;
@@ -18,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
 @Slf4j
 @Service
 @Transactional
@@ -28,12 +28,12 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public BookResponseDTO create(BookCreateRequestDTO newBook) {
-        log.info("Creating new book: {}", newBook.title());
-
+        log.info("Creating new book: title={}, isbn={}", newBook.title(), newBook.isbn());
         var normalizeIsbn = NormalizerIsbn.normalize(newBook.isbn());
 
-        if(repository.existsByIsbn(normalizeIsbn)){
-            throw new BookAlreadyExistsException(newBook.isbn());
+        if (repository.existsByIsbn(normalizeIsbn)) {
+            log.warn("BOOK_ALREADY_EXISTS: isbn={}", normalizeIsbn);
+            throw new BookException(BookErrorType.BOOK_ALREADY_EXISTS);
         }
 
         Book book = new Book(newBook.title(),
@@ -52,9 +52,7 @@ public class BookServiceImpl implements BookService {
     public BookResponseDTO findById(long id) {
         log.debug("Fetching book with ID: {}", id);
 
-        return repository.findById(id)
-                .map(BookMapper::toResponseDTO)
-                .orElseThrow(() -> new BookNotFoundException(id));
+        return BookMapper.toResponseDTO(getBookOrThrow(id));
     }
 
     @Override
@@ -62,8 +60,7 @@ public class BookServiceImpl implements BookService {
     public Book findEntityById(Long id) {
         log.debug("Fetching book with ID: {}", id);
 
-        return repository.findById(id)
-                .orElseThrow(() -> new BookNotFoundException(id));
+        return getBookOrThrow(id);
     }
 
     @Override
@@ -79,24 +76,22 @@ public class BookServiceImpl implements BookService {
     @Override
     public BookResponseDTO update(long id, BookUpdateRequestDTO updateBook) {
         log.info("Updating book with ID: {}", id);
+        var book = getBookOrThrow(id);
 
-        var book = repository.findById(id).orElseThrow(() -> new BookNotFoundException(id));
-
+//        TODO: убрать метод из сущности.
         book.updateDetails(updateBook.title(), updateBook.author(), updateBook.publicationYear(), updateBook.totalCopies());
-        var savedBook = repository.save(book);
 
         log.info("Book updated successfully with ID: {}", id);
-        return BookMapper.toResponseDTO(savedBook);
+        return BookMapper.toResponseDTO(book);
     }
 
     @Override
     public void delete(long id) {
         log.info("Deleting book with ID: {}", id);
 
-        if(!repository.existsById(id)){
-            throw new BookNotFoundException(id);
-        }
-        repository.deleteById(id);
+        Book book = getBookOrThrow(id);
+        repository.delete(book);
+
         log.info("Book deleted successfully with ID: {}", id);
     }
 
@@ -141,8 +136,10 @@ public class BookServiceImpl implements BookService {
         log.debug("Decreasing available copies for book ID: {}", bookId);
 
         if (book.getAvailableCopies() == 0) {
-            throw new BookNotAvailableException(BookMapper.toResponseDTO(book));
+            log.warn("BOOK_NOT_AVAILABLE: id={}", bookId);
+            throw new BookException(BookErrorType.BOOK_NOT_AVAILABLE);
         }
+
         book.borrowCopy();
     }
 
@@ -153,6 +150,14 @@ public class BookServiceImpl implements BookService {
         log.debug("Increasing available copies for book ID: {}", bookId);
 
         book.returnCopy();
+    }
+
+    private Book getBookOrThrow(long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("BOOK_NOT_FOUND: id={}", id);
+                    return new BookException(BookErrorType.BOOK_NOT_FOUND);
+                });
     }
 
 }

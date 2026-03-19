@@ -5,47 +5,31 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.Map;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(BookAlreadyExistsException.class)
-    public ResponseEntity<String> handleBookAlreadyExistsException(BookAlreadyExistsException exception) {
-        return new ResponseEntity<>(exception.getMessage(), HttpStatus.CONFLICT);
-    }
+    @ExceptionHandler(BookException.class)
+    public ResponseEntity<?> handle(BookException ex) {
 
-    @ExceptionHandler(BookNotFoundException.class)
-    public ResponseEntity<String> handleBookNotFoundException(BookNotFoundException exception) {
-        return new ResponseEntity<>(exception.getMessage(), HttpStatus.NOT_FOUND);
-    }
+        HttpStatus status = switch (ex.getErrorType()) {
+            case BOOK_ALREADY_EXISTS,
+                 BOOK_ALREADY_RETURNED,
+                 BOOK_NOT_AVAILABLE,
+                 READER_ALREADY_EXISTS -> HttpStatus.CONFLICT;
 
-    @ExceptionHandler(ReaderAlreadyExistsException.class)
-    public ResponseEntity<String> handleReaderAlreadyExistsException(ReaderAlreadyExistsException exception) {
-        return new ResponseEntity<>(exception.getMessage(), HttpStatus.CONFLICT);
-    }
+            case BOOK_NOT_FOUND,
+                 READER_NOT_FOUND,
+                 LOAN_NOT_FOUND-> HttpStatus.NOT_FOUND;
+        };
 
-    @ExceptionHandler(ReaderNotFoundException.class)
-    public ResponseEntity<String> handleReaderNotFoundException(ReaderNotFoundException exception) {
-        return new ResponseEntity<>(exception.getMessage(), HttpStatus.NOT_FOUND);
-    }
-
-    @ExceptionHandler(BookNotAvailableException.class)
-    public ResponseEntity<String> handleBookNotAvailableException(BookNotAvailableException exception) {
-        return new ResponseEntity<>(exception.getMessage(), HttpStatus.CONFLICT);
-    }
-
-    @ExceptionHandler(LoanNotFoundException.class)
-    public ResponseEntity<String> handleLoanNotFoundException(LoanNotFoundException exception) {
-        return new ResponseEntity<>(exception.getMessage(), HttpStatus.NOT_FOUND);
-    }
-
-    @ExceptionHandler(BookAlreadyReturnedException.class)
-    public ResponseEntity<String> handleBookAlreadyReturnedException(BookAlreadyReturnedException exception) {
-        return new ResponseEntity<>(exception.getMessage(), HttpStatus.CONFLICT);
-    }
-
-    @ExceptionHandler(RemoteServiceNotAvailableException.class)
-    public ResponseEntity<String> handleRemoteServiceNotAvailableException(RemoteServiceNotAvailableException exception) {
-        return new ResponseEntity<>(exception.getMessage(), HttpStatus.SERVICE_UNAVAILABLE);
+        return ResponseEntity
+                .status(status)
+                .body(Map.of(
+                        "error", ex.getErrorType().name(),
+                        "message", ex.getMessage()
+                ));
     }
 
 }

@@ -4,8 +4,8 @@ import com.lav.libtool.dto.reader.ReaderCreateRequestDTO;
 import com.lav.libtool.dto.reader.ReaderResponseDTO;
 import com.lav.libtool.dto.reader.ReaderUpdateRequestDTO;
 import com.lav.libtool.entity.Reader;
-import com.lav.libtool.exceptions.ReaderAlreadyExistsException;
-import com.lav.libtool.exceptions.ReaderNotFoundException;
+import com.lav.libtool.exceptions.BookErrorType;
+import com.lav.libtool.exceptions.BookException;
 import com.lav.libtool.mappers.ReaderMapper;
 import com.lav.libtool.repository.ReaderRepository;
 import com.lav.libtool.util.NormalizerEmail;
@@ -32,7 +32,7 @@ public class ReaderServiceImpl implements ReaderService {
         log.info("Creating new reader: {} {}", newReader.firstName(), newReader.lastName());
         var normEmail = NormalizerEmail.normalize(newReader.email());
         var normPhone = NormalizerPhone.normalize(newReader.phone());
-        if(repository.existsByEmail(normEmail)) throw new ReaderAlreadyExistsException(normEmail);
+        if(repository.existsByEmail(normEmail)) throw new BookException(BookErrorType.READER_ALREADY_EXISTS);
 
         Reader reader = new Reader(
                 newReader.firstName(),
@@ -64,9 +64,7 @@ public class ReaderServiceImpl implements ReaderService {
     public ReaderResponseDTO findById(long id) {
         log.debug("Fetching reader with ID: {}", id);
 
-        return repository.findById(id)
-                .map(ReaderMapper::toReaderResponseDTO)
-                .orElseThrow(() -> new ReaderNotFoundException(id));
+        return ReaderMapper.toReaderResponseDTO(getReaderOrThrow(id));
     }
 
     @Override
@@ -74,8 +72,7 @@ public class ReaderServiceImpl implements ReaderService {
     public Reader findEntityById(long id) {
         log.debug("Fetching reader with ID: {}", id);
 
-        return repository.findById(id)
-                .orElseThrow(() -> new ReaderNotFoundException(id));
+        return getReaderOrThrow(id);
     }
 
     @Override
@@ -91,14 +88,12 @@ public class ReaderServiceImpl implements ReaderService {
     @Override
     public ReaderResponseDTO update(long id, ReaderUpdateRequestDTO updateReader) {
         log.info("Updating reader with ID: {}", id);
-        var reader = repository.findById(id).orElseThrow(() -> new ReaderNotFoundException(id));
+        var reader = getReaderOrThrow(id);
 
         reader.setFirstName(updateReader.firstName());
         reader.setLastName(updateReader.lastName());
         reader.setEmail(NormalizerEmail.normalize(updateReader.email()));
-        reader.setPhone(updateReader.phone());
-
-        repository.save(reader);
+        reader.setPhone(NormalizerPhone.normalize(updateReader.phone()));
 
         log.info("Reader updated successfully with ID: {}", id);
         return ReaderMapper.toReaderResponseDTO(reader);
@@ -108,10 +103,18 @@ public class ReaderServiceImpl implements ReaderService {
     public void delete(long id) {
         log.info("Deleting reader with ID: {}", id);
 
-        if (!repository.existsById(id)) throw new ReaderNotFoundException(id);
+        var reader = getReaderOrThrow(id);
+        repository.delete(reader);
 
-        repository.deleteById(id);
         log.info("Reader deleted successfully with ID: {}", id);
+    }
+
+    private Reader getReaderOrThrow(long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("READER_NOT_FOUND: id={}", id);
+                    return new BookException(BookErrorType.READER_NOT_FOUND);
+                });
     }
 
 }
