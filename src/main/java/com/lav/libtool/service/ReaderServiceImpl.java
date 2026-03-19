@@ -12,6 +12,7 @@ import com.lav.libtool.util.NormalizerEmail;
 import com.lav.libtool.util.NormalizerPhone;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,36 +28,23 @@ public class ReaderServiceImpl implements ReaderService {
 
     @Override
     public ReaderResponseDTO create(ReaderCreateRequestDTO newReader) {
-        // TODO: в логах не стоит логировать чувствительные данные, такие как email и телефон. Даже имя и фамилию,
-        //  а email и телефон точно не стоит логировать или только в нормализованном виде (например, маскировать часть данных).
-        log.info("Creating new reader: {} {}", newReader.firstName(), newReader.lastName());
+        log.info("Creating new reader");
         var normEmail = NormalizerEmail.normalize(newReader.email());
         var normPhone = NormalizerPhone.normalize(newReader.phone());
-        if(repository.existsByEmail(normEmail)) throw new BookException(BookErrorType.READER_ALREADY_EXISTS);
 
         Reader reader = new Reader(
                 newReader.firstName(),
                 newReader.lastName(),
                 normEmail,
                 normPhone);
-        // TODO: ты создаешь reader, сохраняешь его, а потом мапишь в DTO reader вместо savedReader.
-        //  лучше маппить сохраненного savedReader.
-        //  Проблема в том, что в hibernate ID может быть сгенерирован только при сохранении сущности.
-        //  Если ты мапишь до сохранения, то в DTO будет id = null, а после сохранения — уже сгенерированный ID.
-        var savedReader = repository.save(reader);
 
-        log.info("Reader created successfully with ID: {}", savedReader.getId());
-        // TODO: в теории если мы будем работать с несколькими инстансами,
-        //  то может возникнуть Race condition,
-        //  когда два запроса на создание читателя с одинаковым email будут одновременно проверять existsByEmail и оба увидят,
-        //  что такого email нет, и оба создадут читателя с одинаковым email.
-        //  Чтобы избежать этого, можно добавить уникальный индекс на поле email
-        //  в базе данных и обрабатывать исключение при попытке вставить дубликат.
-        //  Но в рамках этого задания можно оставить как есть, так как это уже будет выходить за рамки текущей реализации.
-        //  реализуется это не очень сложно, нужно просто добавить уникальный индекс на email в базе данных и обработать исключение при попытке вставить дубликат.
-        //  и обработать DataIntegrityViolationException
-        //  и если уникальный индекс в БД поймал дубль — переводим в понятную ошибку домена (твой кастомный exception)
-        return ReaderMapper.toReaderResponseDTO(reader);
+        try {
+            var savedReader = repository.save(reader);
+            log.info("Reader created successfully with ID: {}", savedReader.getId());
+            return ReaderMapper.toReaderResponseDTO(savedReader);
+        } catch (DataIntegrityViolationException ex) {
+            throw new BookException(BookErrorType.READER_ALREADY_EXISTS);
+        }
     }
 
     @Override
@@ -88,15 +76,23 @@ public class ReaderServiceImpl implements ReaderService {
     @Override
     public ReaderResponseDTO update(long id, ReaderUpdateRequestDTO updateReader) {
         log.info("Updating reader with ID: {}", id);
+        var normEmail = NormalizerEmail.normalize(updateReader.email());
+        var normPhone = NormalizerPhone.normalize(updateReader.phone());
         var reader = getReaderOrThrow(id);
 
         reader.setFirstName(updateReader.firstName());
         reader.setLastName(updateReader.lastName());
-        reader.setEmail(NormalizerEmail.normalize(updateReader.email()));
-        reader.setPhone(NormalizerPhone.normalize(updateReader.phone()));
+        reader.setEmail(normEmail);
+        reader.setPhone(normPhone);
 
-        log.info("Reader updated successfully with ID: {}", id);
-        return ReaderMapper.toReaderResponseDTO(reader);
+        try {
+            var updated = repository.saveAndFlush(reader);
+            log.info("Reader updated successfully with ID={}", id);
+            return ReaderMapper.toReaderResponseDTO(updated);
+        } catch (DataIntegrityViolationException ex) {
+            log.warn("Duplicate email on update: {}", updateReader.email());
+            throw new BookException(BookErrorType.READER_ALREADY_EXISTS);
+        }
     }
 
     @Override
