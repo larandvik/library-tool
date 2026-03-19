@@ -78,8 +78,10 @@ public class BookServiceImpl implements BookService {
         log.info("Updating book with ID: {}", id);
         var book = getBookOrThrow(id);
 
-//        TODO: убрать метод из сущности.
-        book.updateDetails(updateBook.title(), updateBook.author(), updateBook.publicationYear(), updateBook.totalCopies());
+        book.setTitle(updateBook.title());
+        book.setAuthor(updateBook.author());
+        book.setPublicationYear(updateBook.publicationYear());
+        book.setTotalCopies(updateBook.totalCopies());
 
         log.info("Book updated successfully with ID: {}", id);
         return BookMapper.toResponseDTO(book);

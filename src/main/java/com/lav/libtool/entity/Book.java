@@ -3,9 +3,11 @@ package com.lav.libtool.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor
 public class Book {
 
@@ -37,26 +39,6 @@ public class Book {
         this.publicationYear = publicationYear;
         this.totalCopies = totalCopies;
         this.availableCopies = totalCopies;
-    }
-
-    public void updateDetails(String title, String author, Integer publishYear, Integer totalCopies) {
-
-        if (title != null) {
-            this.title = title;
-        }
-
-        if (author != null) {
-            this.author = author;
-        }
-
-        if (publishYear != null) {
-            this.publicationYear = publishYear;
-        }
-
-        if (totalCopies != null) {
-            this.totalCopies = totalCopies;
-            this.availableCopies = Math.min(this.availableCopies, this.totalCopies);
-        }
     }
 
     public void borrowCopy() {
